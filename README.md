@@ -9,6 +9,8 @@ Demonstration done on a sample website to show access controls for authorisation
 
 Further improvements can be referred to the linked document, Page 10 figure 6. It speaks about having an external system for storing attributes which could be done using [IPFS](https://ipfs.tech/).
 
+# User Manual
+
 ## Run Backend Services
 
 Refer to README.md in backend folder
