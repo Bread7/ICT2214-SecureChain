@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Montserrat', sans-serif;
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+        .register-container {
+            background: white;
+            padding: 20px; /* This value can be increased or decreased to your preference */
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: auto;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-control {
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            padding: .375rem .75rem;
+            height: 40px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            color: #fff;
+            background-color: #007bff;
+            border-color: #007bff;
+            padding: .375rem .75rem;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .validation-error {
+            color: red;
+            font-size: 0.8rem;
+            margin-top: -1rem;
+            margin-bottom: 1rem;
+        }
+        .spinner-border {
+            display: none;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        .disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        .brand-logo {
+            display: block;
+            max-width: 200px;
+            margin-bottom: 20px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-12 col-md-8 col-lg-6 mx-auto">
+            <div class="register-container">
+                <img src="{{ url_for('static', filename='your-logo.png') }}" alt="Brand Logo" class="brand-logo">
+                <h2 class="text-center">Register User</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="contractType">Contract Type</label>
+                        <select id="contractType" class="form-control" aria-describedby="contractTypeError">
+                            <option value="user">User</option>
+                            <option value="owner">Owner</option>
+                        </select>
+                        <div id="contractTypeError" class="validation-error" aria-live="polite"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" class="form-control" placeholder="" aria-describedby="nameError" required>
+                        <div id="nameError" class="validation-error" aria-live="polite"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" class="form-control" placeholder="" aria-describedby="passwordError" required>
+                        <div id="passwordError" class="validation-error" aria-live="polite"></div>
+                    </div>
+                    <div class="form-group" style="padding: 0.1rem;">
+                        <label for="walletAddress">Wallet Address</label>
+                        <input type="text" id="walletAddress" class="form-control" placeholder="Wallet Address" aria-describedby="walletError" required>
+                        <div id="walletError" class="validation-error" aria-live="polite"></div>
+                    </div>
+                    <button type="button" id="registerBtn" class="btn btn-primary btn-block">
+                        Register
+                        <span class="spinner-border spinner-border-sm" id="spinner" role="status" aria-hidden="true"></span>
+                    </button>
+                    <div id="connectedAccount" class="text-center" style="margin-top: 10px; font-size: small;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.getElementById('registerBtn').addEventListener('click', function() {
+        // Input values
+        const name = document.getElementById('name').value;
+        const password = document.getElementById('password').value;
+        let walletAddress = document.getElementById('walletAddress').value;
+        const contractType = document.getElementById('contractType').value;
+
+        // Validate form
+        if (!validateForm()) {
+            return;
+        }
+
+        // Prepare data
+        const registrationData = {
+            username: name,
+            password: password,
+            user_wallet_address: walletAddress,
+            contract_type: contractType
+        };
+
+        // Send registration data to server
+        sendRegistrationData(registrationData);
+    });
+    // Function to request access and get the account if MetaMask is installed
+    async function getMetaMaskAccount() {
+        if (window.ethereum) {
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                return accounts[0]; // The first account is usually the user's primary account
+            } catch (error) {
+                console.error('Error fetching accounts:', error);
+            }
+        } else {
+            console.error('MetaMask is not installed!');
+        }
+        return null;
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        const walletAddressInput = document.getElementById('walletAddress');
+        const connectedAccount = await getMetaMaskAccount();
+        if (connectedAccount) {
+            walletAddressInput.value = connectedAccount;
+            document.getElementById('connectedAccount').textContent = 'Connected with: ' + connectedAccount;
+            // Add a button or toggle to let the user decide if they want to manually enter an address
+            let manualEntryBtn = document.createElement('button');
+            manualEntryBtn.textContent = 'Enter Address Manually';
+            manualEntryBtn.addEventListener('click', function() {
+                walletAddressInput.removeAttribute('readonly');
+                walletAddressInput.focus();
+                walletAddressInput.value = '';
+                this.remove(); // Remove the button after it's clicked
+            });
+            document.getElementById('registerForm').insertBefore(manualEntryBtn, walletAddressInput.nextSibling);
+        }
+    });
+    function validateForm() {
+        let isValid = true;
+        clearValidationErrors();
+
+        // Name validation
+        if (!document.getElementById('name').value.trim()) {
+            document.getElementById('nameError').textContent = 'Name is required.';
+            isValid = false;
+        }
+
+        // Password validation
+        if (!document.getElementById('password').value) {
+            document.getElementById('passwordError').textContent = 'Password is required.';
+            isValid = false;
+        }
+
+        // Wallet address validation (Ethereum address)
+        const walletAddress = document.getElementById('walletAddress').value;
+        if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+            document.getElementById('walletError').textContent = 'Invalid wallet address. It should start with 0x followed by 40 hexadecimal characters.';
+            isValid = false;
+        }
+
+        // Contract type validation - as an example
+        const contractType = document.getElementById('contractType').value;
+        if (!contractType) {
+            document.getElementById('contractTypeError').textContent = 'Contract type selection is required.';
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    function clearValidationErrors() {
+        document.getElementById('nameError').textContent = '';
+        document.getElementById('passwordError').textContent = '';
+        document.getElementById('walletError').textContent = '';
+        document.getElementById('contractTypeError').textContent = '';
+    }
+
+    function sendRegistrationData(data) {
+        // Show spinner and disable button
+        document.getElementById('spinner').style.display = 'inline-block';
+        document.getElementById('registerBtn').classList.add('disabled');
+
+        fetch('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server responded with status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if(data && data.message) {
+                    alert(data.message);
+                } else {
+                    // This is just a fallback message and should be customized as needed
+                    alert('Registration successful!');
+                }
+                // This line should execute if there are no errors thrown in the previous blocks
+                window.location.href = 'login'; // Redirect to login.html
+            })
+            .catch(error => {
+                alert('Registration failed: ' + error.message);
+            })
+            .finally(() => {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('registerBtn').classList.remove('disabled');
+            });
+    }
+    // Check if MetaMask is installed and connected
+    if (window.ethereum) {
+        window.ethereum.request({ method: 'eth_accounts' })
+            .then(accounts => {
+                if (accounts.length > 0) {
+                    document.getElementById('connectedAccount').textContent = 'Connected with: ' + accounts[0];
+                }
+            });
+    }
+</script>
+</body>
+</html>
